@@ -35,8 +35,16 @@ func (ip *Interpreter) execute(tokens []string) {
 		case "copy":
 			ip.Copy()
 
+		case "dictLength":
+			ip.DictLength()
+		case "maxlength":
+			ip.DictMaxLength()
+
 		case "dup":
 			ip.Dup()
+		case "quit":
+			ip.Quit()
+
 		case "exch":
 			ip.Exch()
 		case "pop":
@@ -45,6 +53,17 @@ func (ip *Interpreter) execute(tokens []string) {
 			ip.Clear()
 		case "count":
 			ip.Count()
+		case "for":
+			ip.For()
+
+		case "length":
+			ip.StrLength()
+		case "get":
+			ip.Get()
+		case "getinterval":
+			ip.GetInterval()
+		case "putinterval":
+			ip.PutInterval()
 
 		case "eq":
 			ip.Eq()
