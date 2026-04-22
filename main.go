@@ -1,13 +1,22 @@
 package main
 
-import "fmt"
+import "strings"
 
 func main() {
 	ip := NewInterpreter()
 
-	ip.Push(10)
-	ip.Push(20)
-	ip.Add()
+	// Example program
+	program := `
+	10 5 add
+	3 mul
+	`
 
-	fmt.Println(ip.Pop()) // should print 30
+	tokens := strings.Fields(program)
+
+	ip.execute(tokens)
+
+	// print final stack
+	for len(ip.stack) > 0 {
+		ip.PrintEq()
+	}
 }
