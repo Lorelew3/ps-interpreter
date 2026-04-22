@@ -11,6 +11,17 @@ type Interpreter struct {
 	lexical   bool
 }
 
+func (ip *Interpreter) withEnv(env []map[string]interface{}, fn func()) {
+	old := ip.dictStack
+	ip.dictStack = env
+
+	defer func() {
+		ip.dictStack = old
+	}()
+
+	fn()
+}
+
 // ===================== INIT =====================
 
 func NewInterpreter() *Interpreter {
@@ -59,6 +70,7 @@ func (ip *Interpreter) End() {
 // ===================== LOOKUP =====================
 
 func (ip *Interpreter) Lookup(name string) (interface{}, bool) {
+	// ALWAYS search current stack (dynamic fallback)
 	for i := len(ip.dictStack) - 1; i >= 0; i-- {
 		if v, ok := ip.dictStack[i][name]; ok {
 			return v, true
@@ -89,17 +101,15 @@ func (ip *Interpreter) Call(p Procedure) {
 	old := ip.dictStack
 	defer func() { ip.dictStack = old }()
 
-	// 🔥 IMPORTANT: install lexical snapshot if needed
 	if ip.lexical {
-		ip.dictStack = make([]map[string]interface{}, len(p.lexicalEnv))
-		for i := range p.lexicalEnv {
-			ip.dictStack[i] = make(map[string]interface{})
-			for k, v := range p.lexicalEnv[i] {
-				ip.dictStack[i][k] = v
-			}
-		}
+		// run with captured environment snapshot
+		ip.withEnv(p.lexicalEnv, func() {
+			ip.execute(p.tokens)
+		})
+		return
 	}
 
+	// dynamic mode (unchanged behavior)
 	ip.execute(p.tokens)
 }
 
