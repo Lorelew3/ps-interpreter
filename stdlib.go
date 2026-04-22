@@ -103,7 +103,16 @@ func (ip *Interpreter) Div() {
 	ip.Push(a / b)
 }
 
-func (ip *Interpreter) Idiv() { ip.Div() }
+func (ip *Interpreter) Idiv() {
+	b := asInt(ip.Pop())
+	a := asInt(ip.Pop())
+
+	if b == 0 {
+		panic("division by zero")
+	}
+
+	ip.Push(a / b)
+}
 
 func (ip *Interpreter) Mod() {
 	b := asInt(ip.Pop())
@@ -242,14 +251,44 @@ func (ip *Interpreter) Eq() {
 	b := ip.Pop()
 	a := ip.Pop()
 
-	ip.Push(a == b)
+	switch x := a.(type) {
+	case int:
+		y, ok := b.(int)
+		ip.Push(ok && x == y)
+
+	case bool:
+		y, ok := b.(bool)
+		ip.Push(ok && x == y)
+
+	case string:
+		y, ok := b.(string)
+		ip.Push(ok && x == y)
+
+	default:
+		ip.Push(a == b) // fallback for comparable types only
+	}
 }
 
 func (ip *Interpreter) Ne() {
 	b := ip.Pop()
 	a := ip.Pop()
 
-	ip.Push(a != b)
+	switch x := a.(type) {
+	case int:
+		y, ok := b.(int)
+		ip.Push(!(ok && x == y))
+
+	case bool:
+		y, ok := b.(bool)
+		ip.Push(!(ok && x == y))
+
+	case string:
+		y, ok := b.(string)
+		ip.Push(!(ok && x == y))
+
+	default:
+		ip.Push(a != b) // fallback
+	}
 }
 
 func (ip *Interpreter) Lt() {
@@ -288,7 +327,15 @@ func (ip *Interpreter) And() {
 		return
 	}
 
-	ip.Push(asInt(a) & asInt(b))
+	ia, okA := a.(int)
+	ib, okB := b.(int)
+
+	if okA && okB {
+		ip.Push(ia & ib)
+		return
+	}
+
+	panic("and expects either two bools or two ints")
 }
 
 func (ip *Interpreter) Or() {
@@ -303,7 +350,15 @@ func (ip *Interpreter) Or() {
 		return
 	}
 
-	ip.Push(asInt(a) | asInt(b))
+	ia, okA := a.(int)
+	ib, okB := b.(int)
+
+	if okA && okB {
+		ip.Push(ia | ib)
+		return
+	}
+
+	panic("or expects either two bools or two ints")
 }
 
 func (ip *Interpreter) Not() {
