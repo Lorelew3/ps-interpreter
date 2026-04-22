@@ -1,8 +1,8 @@
 package main
 
 type Procedure struct {
-	tokens []string
-	env    []map[string]interface{}
+	tokens     []string
+	lexicalEnv []map[string]interface{}
 }
 
 type Interpreter struct {
@@ -59,17 +59,9 @@ func (ip *Interpreter) End() {
 // ===================== LOOKUP =====================
 
 func (ip *Interpreter) Lookup(name string) (interface{}, bool) {
-	if ip.lexical {
-		for i := 0; i < len(ip.dictStack); i++ {
-			if v, ok := ip.dictStack[i][name]; ok {
-				return v, true
-			}
-		}
-	} else {
-		for i := len(ip.dictStack) - 1; i >= 0; i-- {
-			if v, ok := ip.dictStack[i][name]; ok {
-				return v, true
-			}
+	for i := len(ip.dictStack) - 1; i >= 0; i-- {
+		if v, ok := ip.dictStack[i][name]; ok {
+			return v, true
 		}
 	}
 	return nil, false
@@ -88,8 +80,8 @@ func (ip *Interpreter) NewProcedure(tokens []string) Procedure {
 	}
 
 	return Procedure{
-		tokens: append([]string{}, tokens...),
-		env:    envCopy,
+		tokens:     append([]string{}, tokens...),
+		lexicalEnv: envCopy,
 	}
 }
 
@@ -97,11 +89,12 @@ func (ip *Interpreter) Call(p Procedure) {
 	old := ip.dictStack
 	defer func() { ip.dictStack = old }()
 
+	// 🔥 IMPORTANT: install lexical snapshot if needed
 	if ip.lexical {
-		ip.dictStack = make([]map[string]interface{}, len(p.env))
-		for i := range p.env {
+		ip.dictStack = make([]map[string]interface{}, len(p.lexicalEnv))
+		for i := range p.lexicalEnv {
 			ip.dictStack[i] = make(map[string]interface{})
-			for k, v := range p.env[i] {
+			for k, v := range p.lexicalEnv[i] {
 				ip.dictStack[i][k] = v
 			}
 		}
