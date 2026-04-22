@@ -2,7 +2,8 @@ package main
 
 import "strconv"
 
-// helper function
+// ===================== PROCEDURE PARSER =====================
+
 func extractProcedure(tokens []string, start int) (Procedure, int) {
 	depth := 0
 	var body []string
@@ -33,239 +34,224 @@ func extractProcedure(tokens []string, start int) (Procedure, int) {
 	panic("unclosed procedure")
 }
 
+// ===================== STEP EXECUTION =====================
+
+func (ip *Interpreter) Step(tokens []string, i *int) {
+	t := tokens[*i]
+
+	// PROCEDURE
+	if t == "{" {
+		proc, end := extractProcedure(tokens, *i)
+		ip.Push(proc)
+		*i = end
+		return
+	}
+
+	// NAME LITERAL
+	if len(t) > 1 && t[0] == '/' {
+		ip.Push(t[1:])
+		return
+	}
+
+	// STRING
+	if len(t) >= 2 && t[0] == '(' && t[len(t)-1] == ')' {
+		ip.Push(t[1 : len(t)-1])
+		return
+	}
+
+	// COMMANDS
+	switch t {
+
+	// STACK
+	case "dup":
+		ip.Dup()
+		return
+	case "exch":
+		ip.Exch()
+		return
+	case "pop":
+		ip.PopOp()
+		return
+	case "clear":
+		ip.Clear()
+		return
+	case "count":
+		ip.Count()
+		return
+	case "copy":
+		ip.Copy()
+		return
+
+	// ARITHMETIC
+	case "add":
+		ip.Add()
+		return
+	case "sub":
+		ip.Sub()
+		return
+	case "mul":
+		ip.Mul()
+		return
+	case "div":
+		ip.Div()
+		return
+	case "idiv":
+		ip.Idiv()
+		return
+	case "mod":
+		ip.Mod()
+		return
+	case "abs":
+		ip.Abs()
+		return
+	case "neg":
+		ip.Neg()
+		return
+	case "ceiling":
+		ip.Ceiling()
+		return
+	case "floor":
+		ip.Floor()
+		return
+	case "round":
+		ip.Round()
+		return
+	case "sqrt":
+		ip.Sqrt()
+		return
+
+	// DICTIONARY
+	case "dict":
+		ip.Dict()
+		return
+	case "length":
+		ip.Length()
+		return
+	case "maxlength":
+		ip.DictMaxLength()
+		return
+	case "begin":
+		ip.BeginDict()
+		return
+	case "end":
+		ip.EndDict()
+		return
+	case "def":
+		ip.DefOp()
+		return
+
+	// STRING
+	case "get":
+		ip.Get()
+		return
+	case "getinterval":
+		ip.GetInterval()
+		return
+	case "putinterval":
+		ip.PutInterval()
+		return
+
+	// BOOLEAN
+	case "eq":
+		ip.Eq()
+		return
+	case "ne":
+		ip.Ne()
+		return
+	case "lt":
+		ip.Lt()
+		return
+	case "gt":
+		ip.Gt()
+		return
+	case "le":
+		ip.Le()
+		return
+	case "ge":
+		ip.Ge()
+		return
+	case "and":
+		ip.And()
+		return
+	case "or":
+		ip.Or()
+		return
+	case "not":
+		ip.Not()
+		return
+	case "true":
+		ip.Push(true)
+		return
+	case "false":
+		ip.Push(false)
+		return
+
+	// FLOW
+	case "if":
+		p := ip.Pop().(Procedure)
+		ip.If(p)
+		return
+
+	case "ifelse":
+		p2 := ip.Pop().(Procedure)
+		p1 := ip.Pop().(Procedure)
+		ip.IfElse(p1, p2)
+		return
+
+	case "for":
+		ip.For()
+		return
+
+	case "repeat":
+		proc := ip.Pop().(Procedure)
+		count := asInt(ip.Pop())
+		ip.Repeat(proc, count)
+		return
+
+	case "quit":
+		panic("quit")
+
+	// IO
+	case "print":
+		ip.Print()
+		return
+	case "=":
+		ip.PrintEq()
+		return
+	case "==":
+		ip.PrintPP()
+		return
+	}
+
+	// INT
+	if v, err := strconv.Atoi(t); err == nil {
+		ip.Push(v)
+		return
+	}
+
+	// FLOAT
+	if v, err := strconv.ParseFloat(t, 64); err == nil {
+		ip.Push(v)
+		return
+	}
+
+	// LOOKUP
+	val, ok := ip.Lookup(t)
+	if !ok {
+		panic("unknown token: " + t)
+	}
+
+	if proc, ok := val.(Procedure); ok {
+		ip.Call(proc)
+	} else {
+		ip.Push(val)
+	}
+}
+
+// ===================== ORIGINAL EXECUTE =====================
+
 func (ip *Interpreter) execute(tokens []string) {
 	for i := 0; i < len(tokens); i++ {
-		t := tokens[i]
-
-		// ===================== PROCEDURE HANDLING =====================
-		if t == "{" {
-			proc, end := extractProcedure(tokens, i)
-			ip.Push(proc)
-			i = end
-			continue
-		}
-
-		// ===================== NAME LITERAL =====================
-		if len(t) > 1 && t[0] == '/' {
-			ip.Push(t[1:])
-			continue
-		}
-
-		// ===================== STRING LITERAL =====================
-		if len(t) >= 2 && t[0] == '(' && t[len(t)-1] == ')' {
-			ip.Push(t[1 : len(t)-1])
-			continue
-		}
-
-		// ===================== COMMANDS =====================
-		switch t {
-
-		// STACK
-		case "dup":
-			ip.Dup()
-			continue
-		case "exch":
-			ip.Exch()
-			continue
-		case "pop":
-			ip.PopOp()
-			continue
-		case "clear":
-			ip.Clear()
-			continue
-		case "count":
-			ip.Count()
-			continue
-		case "copy":
-			ip.Copy()
-			continue
-
-		// ARITHMETIC
-		case "add":
-			ip.Add()
-			continue
-		case "sub":
-			ip.Sub()
-			continue
-		case "mul":
-			ip.Mul()
-			continue
-		case "div":
-			ip.Div()
-			continue
-		case "idiv":
-			ip.Idiv()
-			continue
-		case "mod":
-			ip.Mod()
-			continue
-		case "abs":
-			ip.Abs()
-			continue
-		case "neg":
-			ip.Neg()
-			continue
-		case "ceiling":
-			ip.Ceiling()
-			continue
-		case "floor":
-			ip.Floor()
-			continue
-		case "round":
-			ip.Round()
-			continue
-		case "sqrt":
-			ip.Sqrt()
-			continue
-
-		// DICTIONARY
-		case "dict":
-			ip.Dict()
-			continue
-		case "length":
-			ip.Length()
-			continue
-		case "maxlength":
-			ip.DictMaxLength()
-			continue
-		case "begin":
-			ip.BeginDict()
-			continue
-		case "end":
-			ip.EndDict()
-			continue
-		case "def":
-			ip.DefOp()
-			continue
-
-		// STRING
-		case "get":
-			ip.Get()
-			continue
-		case "getinterval":
-			ip.GetInterval()
-			continue
-		case "putinterval":
-			ip.PutInterval()
-			continue
-
-		// BOOLEAN
-		case "eq":
-			ip.Eq()
-			continue
-		case "ne":
-			ip.Ne()
-			continue
-		case "lt":
-			ip.Lt()
-			continue
-		case "gt":
-			ip.Gt()
-			continue
-		case "le":
-			ip.Le()
-			continue
-		case "ge":
-			ip.Ge()
-			continue
-		case "and":
-			ip.And()
-			continue
-		case "or":
-			ip.Or()
-			continue
-		case "not":
-			ip.Not()
-			continue
-		case "true":
-			ip.Push(true)
-			continue
-		case "false":
-			ip.Push(false)
-			continue
-
-		// FLOW
-		case "if":
-			p := ip.Pop()
-			proc, ok := p.(Procedure)
-			if !ok {
-				panic("if expects procedure")
-			}
-			ip.If(proc)
-			continue
-
-		case "ifelse":
-			p2 := ip.Pop()
-			p1 := ip.Pop()
-
-			proc1, ok1 := p1.(Procedure)
-			proc2, ok2 := p2.(Procedure)
-
-			if !ok1 || !ok2 {
-				panic("ifelse expects procedures")
-			}
-
-			ip.IfElse(proc1, proc2)
-			continue
-
-		case "for":
-			ip.For()
-			continue
-
-		case "repeat":
-			p := ip.Pop()
-			n := ip.Pop()
-
-			proc, ok1 := p.(Procedure)
-			count, ok2 := n.(int)
-
-			if !ok1 || !ok2 {
-				panic("repeat expects (int procedure)")
-			}
-
-			ip.Repeat(proc, count)
-			continue
-
-		case "quit":
-			panic("quit")
-
-		// IO
-		case "print":
-			ip.Print()
-			continue
-		case "=":
-			ip.PrintEq()
-			continue
-		case "==":
-			ip.PrintPP()
-			continue
-		}
-
-		// ===================== LITERALS =====================
-
-		// int
-		if i, err := strconv.Atoi(t); err == nil {
-			ip.Push(i)
-			continue
-		}
-
-		// float
-		if f, err := strconv.ParseFloat(t, 64); err == nil {
-			ip.Push(f)
-			continue
-		}
-
-		// ===================== LOOKUP =====================
-		val, ok := ip.Lookup(t)
-		if !ok {
-			panic("unknown token: " + t)
-		}
-
-		switch v := val.(type) {
-		case Procedure:
-			ip.Call(v)
-		default:
-			ip.Push(v)
-		}
+		ip.Step(tokens, &i)
 	}
 }

@@ -1,22 +1,39 @@
 package main
 
-import "strings"
+import (
+	"bufio"
+	"fmt"
+	"os"
+	"strings"
+)
 
 func main() {
 	ip := NewInterpreter()
 
-	// Example program
-	program := `
-	10 5 add
-	3 mul
-	`
+	fmt.Println("PostScript Interpreter (type 'exit' to quit)")
 
-	tokens := strings.Fields(program)
+	scanner := bufio.NewScanner(os.Stdin)
 
-	ip.execute(tokens)
+	for {
+		fmt.Print("PS> ")
 
-	// print final stack
-	for len(ip.stack) > 0 {
-		ip.PrintEq()
+		if !scanner.Scan() {
+			break
+		}
+
+		line := scanner.Text()
+
+		if line == "exit" {
+			break
+		}
+
+		tokens := strings.Fields(line)
+
+		for i := 0; i < len(tokens); i++ {
+			ip.Step(tokens, &i)
+
+			// 🔥 SHOW STACK AFTER EACH STEP
+			fmt.Println("Stack:", ip.stack)
+		}
 	}
 }
