@@ -430,7 +430,8 @@ func (ip *Interpreter) Print() {
 }
 
 func (ip *Interpreter) PrintEq() {
-	fmt.Println(ip.Pop())
+	v := ip.Pop()
+	fmt.Println(v)
 }
 
 func (ip *Interpreter) PrintPP() {

@@ -24,15 +24,6 @@ func NewInterpreter() *Interpreter {
 	return ip
 }
 
-func (ip *Interpreter) NewProcedure(tokens []string) Procedure {
-	return Procedure{
-		tokens: append([]string{}, tokens...),
-		env: []map[string]interface{}{
-			ip.dictStack[len(ip.dictStack)-1],
-		},
-	}
-}
-
 // ===================== STACK =====================
 
 func (ip *Interpreter) Push(v interface{}) {
@@ -48,32 +39,10 @@ func (ip *Interpreter) Pop() interface{} {
 	return v
 }
 
-func cloneDictStack(src []map[string]interface{}) []map[string]interface{} {
-	dst := make([]map[string]interface{}, len(src))
-	for i, d := range src {
-		nd := make(map[string]interface{}, len(d))
-		for k, v := range d {
-			nd[k] = v
-		}
-		dst[i] = nd
-	}
-	return dst
-}
-
-// ===================== DICTIONARY =====================
+// ===================== DICT =====================
 
 func (ip *Interpreter) Def(name string, val interface{}) {
-	top := ip.dictStack[len(ip.dictStack)-1]
-	top[name] = val
-}
-
-func (ip *Interpreter) Lookup(name string) (interface{}, bool) {
-	for i := len(ip.dictStack) - 1; i >= 0; i-- {
-		if v, ok := ip.dictStack[i][name]; ok {
-			return v, true
-		}
-	}
-	return nil, false
+	ip.dictStack[len(ip.dictStack)-1][name] = val
 }
 
 func (ip *Interpreter) Begin(d map[string]interface{}) {
@@ -87,23 +56,64 @@ func (ip *Interpreter) End() {
 	ip.dictStack = ip.dictStack[:len(ip.dictStack)-1]
 }
 
-// ===================== PROCEDURES =====================
-func (ip *Interpreter) Call(proc Procedure) {
-	oldLen := len(ip.dictStack)
+// ===================== LOOKUP =====================
 
-	// restore even if panic happens
-	defer func() {
-		ip.dictStack = ip.dictStack[:oldLen]
-	}()
-
-	// IMPORTANT: shallow env is unsafe → clone
-	for _, d := range proc.env {
-		copyMap := make(map[string]interface{}, len(d))
-		for k, v := range d {
-			copyMap[k] = v
+func (ip *Interpreter) Lookup(name string) (interface{}, bool) {
+	if ip.lexical {
+		for i := 0; i < len(ip.dictStack); i++ {
+			if v, ok := ip.dictStack[i][name]; ok {
+				return v, true
+			}
 		}
-		ip.dictStack = append(ip.dictStack, copyMap)
+	} else {
+		for i := len(ip.dictStack) - 1; i >= 0; i-- {
+			if v, ok := ip.dictStack[i][name]; ok {
+				return v, true
+			}
+		}
+	}
+	return nil, false
+}
+
+// ===================== PROCEDURES =====================
+
+func (ip *Interpreter) NewProcedure(tokens []string) Procedure {
+	envCopy := make([]map[string]interface{}, len(ip.dictStack))
+
+	for i := range ip.dictStack {
+		envCopy[i] = make(map[string]interface{})
+		for k, v := range ip.dictStack[i] {
+			envCopy[i][k] = v
+		}
 	}
 
-	ip.execute(proc.tokens)
+	return Procedure{
+		tokens: append([]string{}, tokens...),
+		env:    envCopy,
+	}
+}
+
+func (ip *Interpreter) Call(p Procedure) {
+	old := ip.dictStack
+	defer func() { ip.dictStack = old }()
+
+	if ip.lexical {
+		ip.dictStack = make([]map[string]interface{}, len(p.env))
+		for i := range p.env {
+			ip.dictStack[i] = make(map[string]interface{})
+			for k, v := range p.env[i] {
+				ip.dictStack[i][k] = v
+			}
+		}
+	}
+
+	ip.execute(p.tokens)
+}
+
+// ===================== EXEC =====================
+
+func (ip *Interpreter) execute(tokens []string) {
+	for i := 0; i < len(tokens); i++ {
+		ip.Step(tokens, &i)
+	}
 }

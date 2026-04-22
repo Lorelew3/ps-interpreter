@@ -10,8 +10,7 @@ import (
 func main() {
 	ip := NewInterpreter()
 
-	fmt.Println("PostScript Interpreter (type 'exit' to quit)")
-
+	fmt.Println("PostScript Interpreter (type 'exit')")
 	scanner := bufio.NewScanner(os.Stdin)
 
 	for {
@@ -22,18 +21,11 @@ func main() {
 		}
 
 		line := scanner.Text()
-
 		if line == "exit" {
 			break
 		}
 
 		tokens := strings.Fields(line)
-
-		for i := 0; i < len(tokens); i++ {
-			ip.Step(tokens, &i)
-
-			// 🔥 SHOW STACK AFTER EACH STEP
-			fmt.Println("Stack:", ip.stack)
-		}
+		ip.execute(tokens)
 	}
 }
