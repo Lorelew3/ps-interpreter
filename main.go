@@ -21,6 +21,11 @@ func main() {
 		}
 
 		line := scanner.Text()
+
+		if idx := strings.Index(line, "%"); idx != -1 {
+			line = line[:idx]
+		}
+
 		if line == "exit" {
 			break
 		}

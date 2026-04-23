@@ -67,9 +67,11 @@ func (ip *Interpreter) Copy() {
 	}
 
 	start := len(ip.stack) - n
-	slice := append([]interface{}{}, ip.stack[start:]...)
 
-	ip.stack = append(ip.stack, slice...)
+	// copy in reverse (THIS is the key fix)
+	for i := len(ip.stack) - 1; i >= start; i-- {
+		ip.stack = append(ip.stack, ip.stack[i])
+	}
 }
 
 // ===================== ARITHMETIC =====================
@@ -100,7 +102,13 @@ func (ip *Interpreter) Div() {
 		panic("division by zero")
 	}
 
-	ip.Push(a / b)
+	// return int if divisible cleanly
+	res := a / b
+	if res == float64(int(res)) {
+		ip.Push(int(res))
+	} else {
+		ip.Push(res)
+	}
 }
 
 func (ip *Interpreter) Idiv() {
@@ -195,10 +203,12 @@ func (ip *Interpreter) EndDict() {
 
 func (ip *Interpreter) DefOp() {
 	val := ip.Pop()
-	name := ip.Pop().(string)
 
-	if len(name) > 0 && name[0] == '/' {
-		name = name[1:]
+	nameVal := ip.Pop()
+
+	name, ok := nameVal.(string)
+	if !ok {
+		panic(fmt.Sprintf("def expects name string, got %T (%v)", nameVal, nameVal))
 	}
 
 	ip.Def(name, val)
@@ -430,10 +440,19 @@ func (ip *Interpreter) Print() {
 }
 
 func (ip *Interpreter) PrintEq() {
-	v := ip.Pop()
+	if len(ip.stack) == 0 {
+		fmt.Println("stack: []")
+		return
+	}
+
+	v := ip.stack[len(ip.stack)-1] // peek, NOT pop
 	fmt.Println(v)
 }
 
 func (ip *Interpreter) PrintPP() {
 	fmt.Printf("%#v\n", ip.Pop())
+}
+
+func (ip *Interpreter) Stack() {
+	fmt.Println(ip.stack)
 }

@@ -2,6 +2,7 @@ package main
 
 import (
 	"strconv"
+	"strings"
 )
 
 // ===================== PROCEDURE =====================
@@ -39,7 +40,7 @@ func extractProcedure(ip *Interpreter, tokens []string, start int) (Procedure, i
 // ===================== STEP =====================
 
 func (ip *Interpreter) Step(tokens []string, i *int) {
-	t := tokens[*i]
+	t := strings.TrimSpace(tokens[*i])
 
 	// procedure
 	if t == "{" {
@@ -168,7 +169,8 @@ func (ip *Interpreter) Step(tokens []string, i *int) {
 
 	case "repeat":
 		p := ip.Pop().(Procedure)
-		n := ip.Pop().(int)
+		n := asInt(ip.Pop())
+
 		for i := 0; i < n; i++ {
 			ip.Call(p)
 		}
@@ -186,6 +188,8 @@ func (ip *Interpreter) Step(tokens []string, i *int) {
 		ip.PrintEq()
 	case "==":
 		ip.PrintPP()
+	case "s":
+		ip.Stack()
 
 	// MODE SWITCH
 	case "lexical":
@@ -198,6 +202,10 @@ func (ip *Interpreter) Step(tokens []string, i *int) {
 		if v, err := strconv.Atoi(t); err == nil {
 			ip.Push(v)
 			return
+		}
+
+		if f, err := strconv.ParseFloat(t, 64); err == nil {
+			ip.Push(f)
 		}
 
 		val, ok := ip.Lookup(t)
