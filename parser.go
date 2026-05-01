@@ -206,6 +206,7 @@ func (ip *Interpreter) Step(tokens []string, i *int) {
 
 		if f, err := strconv.ParseFloat(t, 64); err == nil {
 			ip.Push(f)
+			return
 		}
 
 		val, ok := ip.Lookup(t)
